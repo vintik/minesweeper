@@ -1,0 +1,13 @@
+html, body, table {
+    border: 1px solid black;
+}
+
+#ms_board tr, #ms_board td {
+    border: 1px solid black;
+}
+
+/*
+#boardSizeSubmit {
+    display: block;
+}
+*/
