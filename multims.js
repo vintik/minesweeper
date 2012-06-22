@@ -1,60 +1,86 @@
-// TODO - remove after browser implementation
-// var util = require("util");
-
-// 
-
-
+var glob_tiles;
 function Board (width, height) {
     console.log("creating board");
-    this.element = $("#ms_board");
+    // TODO - get rid of hard coded element
+    this.element = document.getElementById("ms_board");
     this.width = width;
     this.height = height;
     this.tileAmount = width*height;
     this.tiles = [[],[]];
     // hard coded difficulty
-    this.num_mines = Math.floor(this.tileAmount / 4);
+    this.num_mines = Math.floor(this.tileAmount / 6);
     console.log("initialized props");
 
     this.initOrResetTiles();
+    this.createBoardView();
+//    this.element.addEventListener("click", function (e) {
+    var _this = this;
+    $(this.element).on("click", function (e) {
+	_this.makeMove(e.originalEvent.srcElement);
+    });
+    glob_tiles = this.tiles;
     return this;
 }
 
-Board.prototype.createBoardView = function(tableElement) {
-    var tr = "", td = "", rowString;
+Board.prototype.createBoardView = function() {
+    var div, span;
     for (var i = 0; i < this.height; i++) {
-	rowString = "<tr>";
+	div = document.createElement('div');
 	for (var j = 0; j < this.width; j++) {
-	    rowString += "<td id='"+i+"_"+j+"'></td>";
+	    span = document.createElement('span');
+	    span.id= i+"_"+j;
+	    div.appendChild(span);
+	    this.element.appendChild(div);
 	}
-	rowString += "</tr>";
-	$(tableElement).append(rowString);
-
     }
-    // TODO - figure out proper proportions
-    $(tableElement).css({
-	"border": "1px solid black",
-	"width": "100%",
-	"height": "500px"
-    });
-    // TODO - remove hard coded table id
-    $("#ms_board tr, #ms_board td").css("border", "1px solid black");
+    $("#ms_board span").addClass("grid_cell");
 };
 
-// TODO - refactor to be row/column instead of x/y
-Board.prototype.calcProximity = function (xClicked, yClicked) {
+
+Board.prototype.makeMove = function (el) {
+    var row_column = el.id.split("_"),
+    rowClicked = Number(row_column[0]),
+    colClicked = Number(row_column[1]),
+    tileClicked = this.tiles[rowClicked][colClicked],
+    minesProx;
+    console.log("made a move at: "+ el.id);
+
+  // clicked on an already open tile
+    if (typeof tileClicked === "number") {
+	return;
+    }
+
+    // clicked on a mine
+    if (tileClicked === true) {
+	// TODO proper restart logic
+	alert("Good game. You lose.");
+	return;
+    }
+    
+    // clicked on a closed tile, no mine
+    console.log("no mine here, checking how many nearby");
+    minesProx = this.calcProximity(rowClicked, colClicked);
+    this.tiles[rowClicked][colClicked] = minesProx;
+    el.innerHTML = minesProx.toString();
+};
+
+Board.prototype.calcProximity = function (rowClicked, colClicked) {
+    console.log("calcProximity: row: "+ rowClicked + ", col: "+colClicked);
     var count = 0;
-    for (var y = yClicked - 1; y <= yClicked + 1; y++) {
-	//	    console.log("iter Y: "+i);
-	for (var x = xClicked - 1; x <= xClicked + 1; x++) {
-	    //		console.log("iter X: "+j);
-	    if (y < 0 || x < 0 || y > this.height || x > this.width) {
+    console.log("---- Checking for mines:");
+    for (var row = rowClicked - 1; row <= rowClicked + 1; row++) {
+	console.log("row: "+row);
+	for (var col = colClicked - 1; col <= colClicked + 1; col++) {
+	    console.log("col: "+col);
+	    if (col < 0 || row < 0 || col > this.height - 1 || row > this.width - 1) {
+		console.log("out of bounds");
+		// out of bounds
 		continue;
 	    }
-	    console.log("checking row: "+ y +", column"+ x);
-	    if (this.tiles[y][x] === true) {
-		console.log("Found a mine at row: " +y+", column: "+x);
+//	    console.log("-- "+ y +", "+ x);
+	    if (this.tiles[row][col] === true) {
+		console.log("Found a mine at row: " +row+", column: "+col);
 		count++;
-		    this.tiles[yClicked][xClicked] = count;
 	    }
 	}
     }
@@ -95,16 +121,6 @@ Board.prototype.initOrResetTiles = function () {
 //    console.log(util.inspect(this.tiles));
 };
 
-Board.prototype.makeMove = function (el) {
-    var row_column = el.id.split("_");
-    if (this.tiles[rowClicked][columnClicked] === true) {
-	// TODO proper restart logic
-	alert("Good game. You lose.");
-	return;
-    }
-    var minesProx = board.calculateProximity(columnClicked, rowClicked);
-    el.innerHTML = minesProx.toString();
-};
 
 $(document).ready(function () {
     $("#boardSizeSubmit").on("click", function() {
@@ -115,11 +131,7 @@ $(document).ready(function () {
 	    // TODO - some sort of alert/validation
 	    return;
 	}
-	console.log(this);
 	var board = new Board(Number(boardWidth), Number(boardHeight));
-	board.createBoardView($("#ms_board"));
-	$(board.element).on("click", function (e) {
-	    board.makeMove(e.originalEvent.srcElement);
-	});
+	console.log(board.tiles);
     });
 });
