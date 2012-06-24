@@ -1,80 +1,23 @@
-var G_SCENARIOS = {
-    CONTINUE: 1,
-    END_GAME: 2
-};
+var UNCOVERED_NORMAL = 0,
+    UNCOVERED_MINE = 1,
+    UNCOVERED_ALL = 2;
 
 var _debug_tiles;
+
 function Board (width, height, num_mines) {
-    console.log("creating board");
+    // console.log("New board: width=" + width + ", height=" + height + ", num_mines=" + num_mines);
 
     this.width = width;
     this.height = height;
-    this.tileAmount = width*height;
-    this.tiles = [[],[]];
-    // hard coded difficulty
+    this.tiles = null;
     this.num_mines = num_mines;
+
     this.initOrResetTiles();
-//    this.element.addEventListener("click", function (e) {
+    this.calcTileValues();
+
     _debug_tiles = this.tiles;
     return this;
 }
-
-
-Board.prototype.uncover = function (row, col, callback) {
-    tileClicked = this.tiles[row][col],
-    minesProx;
-    console.log("made a move at: "+ el.id);
-
-  // clicked on an already open tile
-    if (typeof tileClicked === "number") {
-	// TODO beep?
-	return G_SCENARIOS.CONTINUE;
-    }
-
-    // clicked on a mine
-    if (tileClicked === true) {
-	// TODO proper restart logic
-	alert("Good game. You lose.");
-	return G_SCENARIOS.END_GAME;
-    }
-    
-    // clicked on a closed tile, no mine
-    console.log("no mine here, checking how many nearby")
-    minesProx = this.calcProximity(row, col);
-    if (minesProx === 0) {
-
-    }
-    this.tiles[rowClicked][colClicked] = minesProx;
-	callback();
-    return
-};
-
-
-
-
-Board.prototype.calcProximity = function (rowClicked, colClicked) {
-    console.log("calcProximity: row: "+ rowClicked + ", col: "+colClicked);
-    var count = 0;
-    console.log("---- Checking for mines:");
-    for (var row = rowClicked - 1; row <= rowClicked + 1; row++) {
-	console.log("row: "+row);
-	for (var col = colClicked - 1; col <= colClicked + 1; col++) {
-	    console.log("col: "+col);
-	    if (col < 0 || row < 0 || col > this.height - 1 || row > this.width - 1) {
-		console.log("out of bounds");
-		
-		// out of bounds
-		continue;
-	    }
-//	    console.log("-- "+ y +", "+ x);
-	    if (this.tiles[row][col] === true) {
-		console.log("Found a mine at row: " +row+", column: "+col);
-		count++;
-	    }
-	}
-    }
-    return count;
-};
 
 
 Board.prototype.initOrResetTiles = function () {
@@ -85,44 +28,142 @@ Board.prototype.initOrResetTiles = function () {
 	console.log("Error: height and width have not been defined, please refresh the page.");
 //	alert("Error: height and width have not been defined, please refresh the page.");
     }
-    console.log("populating tiles");
+    console.log("populating tiles" + this.width + this.height);
 
     for (i = 0; i < this.width; i++) {
 	this.tiles[i] = [];
 
 	for (j = 0; j < this.width; j++) {
-	    this.tiles[i][j] = false;
+	    this.tiles[i][j] = {
+		row: i,
+		column: j,
+		mine: false,
+		uncovered: false,
+		minesNear: 0
+	    };
 	}
     }
 
     console.log("finished populating tiles");
+    console.log(this.tiles);
 //    console.log(util.inspect(this.tiles));
-
+    console.log("LOOOL");
+    console.log(this.num_mines);
     // TODO this is a potential infinite loop
-
     for (i = 0; i < this.num_mines; i++) {
 	minePosX = Math.floor(Math.random()*this.width);
 	minePosY = Math.floor(Math.random()*this.height);
 	// if there's alerady a mine there, put it some place else
-	if (this.tiles[minePosX][minePosY] === true) {
+	if (this.tiles[minePosX][minePosY].mine === true) {
 	    i--;
 	    continue;
 	}
-	this.tiles[minePosX][minePosY] = true;
+	console.log("setting mine at row: "+minePosX+", col: "+minePosY);
+	this.tiles[minePosX][minePosY].mine = true;
     }
 //    console.log(util.inspect(this.tiles));
 };
 
+Board.prototype.calcTileValues = function () {
+    console.log("calcTileValues");
+    for (var row = 0; row < this.width; row++) {
+	for (var col = 0; col < this.height; col++) {
+	    this.tiles[row][col].minesNear = this.calcProximity(row, col);
+	}
+    }
+};
+
+Board.prototype.uncover = function (row, col, callback) {
+    var tileClicked = this.tiles[row][col];
+    // clicked on a mine
+    if (tileClicked.mine === true) {
+	// TODO proper restart logic
+	alert("Good game. You lose.");
+	return UNCOVERED_MINE;
+    }
+    
+    // clicked on an already open tile
+    if (tileClicked.uncovered === true) {
+	// TODO beep?
+	return UNCOVERED_NORMAL;
+    }
+
+    tileClicked.uncovered = true;
+
+    var checkAllNear = function (uncoverFlag) {
+	console.log(this);
+	for (var r = row - 1; r <= row + 1; r++) {
+	    //	    console.log("row: "+r);
+	    for (var c = col - 1; c <= col + 1; c++) {
+		//		console.log("col: "+c);
+		if (c < 0 || r < 0 || c > this.height - 1 || r > this.width - 1) {
+		    continue;
+		}
+		console.log("R: "+r+", C: "+c);
+		if (this.tiles[r][c].minesNear === 0) {
+		    this.uncover(r, c, callback);
+		} else if (uncoverFlag) {
+		    this.uncover(r, c, callback);
+		}
+	    }
+	}
+    };
+
+    // clicked on a closed tile, no mine
+    if (tileClicked.minesNear === 0) {
+	checkAllNear.call(this, true);
+    } else {
+	checkAllNear.call(this, false);
+//	checkAllNear(false);
+    }
+
+    callback(tileClicked);
+    return UNCOVERED_NORMAL;
+};
+
+
+
+// change clicked - knows nothing about clicks
+Board.prototype.calcProximity = function (rowClicked, colClicked) {
+    console.log("calcProximity: row: "+ rowClicked + ", col: "+colClicked);
+    var count = 0;
+//    console.log("---- Checking for mines:");
+    for (var row = rowClicked - 1; row <= rowClicked + 1; row++) {
+//	console.log("row: "+row);
+	for (var col = colClicked - 1; col <= colClicked + 1; col++) {
+//	    console.log("col: "+col);
+	    if (col < 0 || row < 0 || col > this.height - 1 || row > this.width - 1) {
+//		console.log("out of bounds");
+		
+		// out of bounds
+		continue;
+	    }
+//	    console.log("-- "+ y +", "+ x);
+	    if (this.tiles[row][col].mine === true) {
+//		console.log("Found a mine at row: " +row+", column: "+col);
+		count++;
+	    }
+	}
+    }
+    return count;
+};
+
+
 // TODO - create game config
-var Game = function (boardEl, widthEl, heightEl, difficulty) {
+var Game = function (boardEl, width, height, difficulty) {
+    var num_tiles = 0;
     this.boardEl = boardEl;
-    this.width = Number(widthEl.innerHTML);
-    this.height = Number(heightEl.innerHTML);
-    this.mines = calcNumMines();
+    this.width = width;
+    this.height = height;
+    num_tiles = this.width * this.height;
+    console.log(num_tiles);
+    this.num_mines = calcNumMines();
     
     // TODO - remove hard coded difficulty
     function calcNumMines () {
-	return ((this.width * this.height) / 6);
+	console.log("nummines");
+	console.log(Math.floor(num_tiles / 6));
+	return (Math.floor(num_tiles / 6));
     }
     this.newGame();
     this.createBoardView();
@@ -139,7 +180,9 @@ Game.prototype.makeMove = function (el) {
     var row_column = el.id.split("_"),
     rowClicked = Number(row_column[0]),
     colClicked = Number(row_column[1]),
-    result = this.board.uncover(rowClicked, colClicked);
+    result = this.board.uncover(rowClicked, colClicked, function (tile) {
+	$("#"+tile.row+"_"+tile.column).text(tile.minesNear);
+    });
     // TODO
     switch (result) {
     }
@@ -154,7 +197,7 @@ Game.prototype.createBoardView = function() {
 	    span.id= i+"_"+j;
 	    div.appendChild(span);
 	    // TODO why is this here and not in the outer loop?
-	    this.element.appendChild(div);
+	    this.boardEl.appendChild(div);
 	}
     }
     $("#ms_board span").addClass("grid_cell");
@@ -170,10 +213,11 @@ Game.prototype.newGame = function () {
 
 $(document).ready(function () {
     $("#boardSizeSubmit").on("click", function() {
-	var boardEl = document.getElementById("boardEl"),
-	width = document.getElementById("boardWidthInput").innerHTML,
-	height = document.getElementById("boardHeightInput").innerHTML,
-	difficulty = document.getElementById("gameDifficultyInput").innerHTML;
+	var boardEl = document.getElementById("ms_board"),
+	width = Number(document.getElementById("boardWidthInput").value),
+	height = Number(document.getElementById("boardHeightInput").value),
+	difficulty = Number(document.getElementById("gameDifficultyInput").value);
+
 	var game = new Game(boardEl, width, height, difficulty);
     });
 });
