@@ -10,17 +10,32 @@ UNCOVERED_MINE_FLAG = 4;
 
 // main script
 $(document).ready(function () {
+    var controlsFlag = true;
+    var boardEl = document.getElementById("board"),
+    controlsEl = document.getElementById("controls");
+
     $("#new_game").on("click", function() {
-	var boardEl = document.getElementById("board"),
-	width = Number(document.getElementById("width").value),
+	var width = Number(document.getElementById("width").value),
 	height = Number(document.getElementById("height").value),
 	num_mines = Number(document.getElementById("num_mines").value);
 
+	toggleControls();
 	var game = new Game(boardEl, width, height, num_mines, function () {
 	    game.deleteBoardView();
 	    game = null;
+	    toggleControls();
 	});
     });
+
+    var toggleControls = function () {
+	if (controlsFlag) {
+	    controlsEl.style.display = "none";
+	    controlsFlag = false;
+	} else {
+	    controlsEl.style.display = "block";
+	    controlsFlag = true;
+	}
+    };
 });
 
 // The game UI object - creates the grid as divs with spans in them, each span's id is set to 
@@ -41,7 +56,7 @@ var Game = function (el, width, height, num_mines, endGameCallback) {
     $(this.boardEl).off("contextmenu.ms");
     $(this.boardEl).on("contextmenu.ms", function(e) {
 	var el = e.originalEvent.srcElement;
-	var rc = rcFromId (el.id);
+	var rc = _this.rcFromId (el.id);
 	var tile = _this.board.getTile(rc.row, rc.col);
 	tile.mineFlag = ! tile.mineFlag;
 	_this.drawTileEl(el, tile);
@@ -79,7 +94,7 @@ Game.prototype.createBoardView = function() {
 	div = document.createElement('div');
 	for (var j = 0; j < this.width; j++) {
 	    span = document.createElement('span');
-	    span.id=idFromRC (i, j);
+	    span.id=this.idFromRC (i, j);
 	    div.appendChild(span);
 	}
 	this.boardEl.appendChild(div);
@@ -95,7 +110,7 @@ Game.prototype.deleteBoardView = function() {
 
 // draw's a tile given a row, column, and a tile object
 Game.prototype.drawTileRC = function (r, c, tile) {
-    var el = document.getElementById(idFromRC(r, c));
+    var el = document.getElementById(Game.prototype.idFromRC(r, c));
     Game.prototype.drawTileEl(el, tile);
 
 };
@@ -115,7 +130,7 @@ Game.prototype.drawTileEl = function (el, tile) {
 
 // processes a user move
 Game.prototype.makeMove = function (el) {
-    var rc = rcFromId (el.id);
+    var rc = this.rcFromId (el.id);
     switch (this.board.uncover (rc.row, rc.col, this.drawTileRC)) {
     case UNCOVERED_MINE:
 	alert ("you are blown to pieces");
