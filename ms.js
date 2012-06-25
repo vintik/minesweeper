@@ -55,7 +55,7 @@ var Game = function (el, width, height, num_mines, endGameCallback) {
     // TODO bug that the context menu still shows up
     $(this.boardEl).off("contextmenu.ms");
     $(this.boardEl).on("contextmenu.ms", function(e) {
-	var el = e.originalEvent.srcElement;
+	var el = e.originalEvent.srcElement ? e.originalEvent.srcElement : e.target;
 	var rc = _this.rcFromId (el.id);
 	var tile = _this.board.getTile(rc.row, rc.col);
 	tile.mineFlag = ! tile.mineFlag;
@@ -66,7 +66,8 @@ var Game = function (el, width, height, num_mines, endGameCallback) {
     // TODO - check if a srcElement is always a span
     $(this.boardEl).off("click.ms");
     $(this.boardEl).on("click.ms", function (e) {
-	var el = e.originalEvent.srcElement;
+	console.log(e);
+	var el = e.originalEvent.srcElement ? e.originalEvent.srcElement : e.target;
 	if (e.which === 1) { // left button
 	    _this.makeMove(el);
 	}
